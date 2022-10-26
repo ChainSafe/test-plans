@@ -3,8 +3,9 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/test-plans/dht/utils"
 	"time"
+
+	"github.com/libp2p/test-plans/dht/utils"
 
 	"github.com/testground/sdk-go/runtime"
 )
@@ -86,17 +87,19 @@ func TestFindPeers(ctx context.Context, ri *DHTRunInfo) error {
 		cancel()
 		if err != nil {
 			runenv.RecordMessage("find peer failed: peer %s : %s", p, err)
-			runenv.RecordMetric(&runtime.MetricDefinition{
-				Name:           fmt.Sprintf("time-to-failed-peer-%d", found),
-				Unit:           "ns",
-				ImprovementDir: -1,
-			}, float64(time.Since(t).Nanoseconds()))
+			ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-failed-peer-%d", found), float64(time.Since(t).Nanoseconds()))
+			// runenv.RecordMetric(&runtime.MetricDefinition{
+			// 	Name:           fmt.Sprintf("time-to-failed-peer-%d", found),
+			// 	Unit:           "ns",
+			// 	ImprovementDir: -1,
+			// }, float64(time.Since(t).Nanoseconds()))
 		} else {
-			runenv.RecordMetric(&runtime.MetricDefinition{
-				Name:           fmt.Sprintf("time-to-peer-%d", found),
-				Unit:           "ns",
-				ImprovementDir: -1,
-			}, float64(time.Since(t).Nanoseconds()))
+			ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-peer-%d", found), float64(time.Since(t).Nanoseconds()))
+			// runenv.RecordMetric(&runtime.MetricDefinition{
+			// 	Name:           fmt.Sprintf("time-to-peer-%d", found),
+			// 	Unit:           "ns",
+			// 	ImprovementDir: -1,
+			// }, float64(time.Since(t).Nanoseconds()))
 		}
 
 		found++

@@ -7,7 +7,7 @@ import (
 
 type RunInfo struct {
 	RunEnv *runtime.RunEnv
-	Client *sync.Client
+	Client sync.Client
 
 	Groups          []string
 	GroupProperties map[string]*GroupInfo

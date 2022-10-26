@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/testground/sdk-go/runtime"
 	"github.com/testground/sdk-go/sync"
 )
 
@@ -55,32 +54,65 @@ func (s *BatchStager) End() error {
 	// Signal that we're done
 	stage := sync.State(s.name + strconv.Itoa(s.stage))
 
+	// sdk-go v0.3.0 implementing using RecordMessage
+	// t := time.Now()
+	// _, err := s.ri.Client.SignalEntry(s.ctx, stage)
+	// if err != nil {
+	// 	return err
+	// }
+	// total := s.ri.RunEnv.TestInstanceCount - 1
+	// s.ri.RunEnv.RecordMessage("name: signal %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
+
+	// t = time.Now()
+	// err = <-s.ri.Client.MustBarrier(s.ctx, stage, total).C
+	// s.ri.RunEnv.RecordMessage("%d passed the barrier", s.seq)
+	// s.ri.RunEnv.RecordMessage("name: barrier %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
+
+	// s.ri.RunEnv.RecordMessage("name: full %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
+
+	// sdk-go v0.3.0 implementing using MetricsApi
 	t := time.Now()
 	_, err := s.ri.Client.SignalEntry(s.ctx, stage)
 	if err != nil {
 		return err
 	}
 
-	s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
-		Name:           "signal " + string(stage),
-		Unit:           "ns",
-		ImprovementDir: -1,
-	}, float64(time.Since(t).Nanoseconds()))
+	s.ri.RunEnv.R().RecordPoint("signal "+string(stage), float64(time.Since(t).Nanoseconds()))
 
 	t = time.Now()
-
 	err = <-s.ri.Client.MustBarrier(s.ctx, stage, s.total).C
-	s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
-		Name:           "barrier" + string(stage),
-		Unit:           "ns",
-		ImprovementDir: -1,
-	}, float64(time.Since(t).Nanoseconds()))
+	s.ri.RunEnv.R().RecordPoint("barrier"+string(stage), float64(time.Since(t).Nanoseconds()))
 
-	s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
-		Name:           "full " + string(stage),
-		Unit:           "ns",
-		ImprovementDir: -1,
-	}, float64(time.Since(s.t).Nanoseconds()))
+	s.ri.RunEnv.R().RecordPoint("full "+string(stage), float64(time.Since(s.t).Nanoseconds()))
+
+	// sdk-go v0.1.1 implementation
+	// t := time.Now()
+	// _, err := s.ri.Client.SignalEntry(s.ctx, stage)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
+	// 	Name:           "signal " + string(stage),
+	// 	Unit:           "ns",
+	// 	ImprovementDir: -1,
+	// }, float64(time.Since(t).Nanoseconds()))
+
+	// t = time.Now()
+
+	// err = <-s.ri.Client.MustBarrier(s.ctx, stage, s.total).C
+	// s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
+	// 	Name:           "barrier" + string(stage),
+	// 	Unit:           "ns",
+	// 	ImprovementDir: -1,
+	// }, float64(time.Since(t).Nanoseconds()))
+
+	// s.ri.RunEnv.RecordMetric(&runtime.MetricDefinition{
+	// 	Name:           "full " + string(stage),
+	// 	Unit:           "ns",
+	// 	ImprovementDir: -1,
+	// }, float64(time.Since(s.t).Nanoseconds()))
+
 	return err
 }
 func (s *BatchStager) Reset(name string) { s.stager.Reset(name) }

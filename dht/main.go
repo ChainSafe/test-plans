@@ -2,10 +2,10 @@ package main
 
 import (
 	test "github.com/libp2p/test-plans/dht/test"
-	"github.com/testground/sdk-go/runtime"
+	"github.com/testground/sdk-go/run"
 )
 
-var testCases = map[string]runtime.TestCaseFn{
+var testCases = map[string]interface{}{
 	"find-peers":        test.FindPeers,
 	"find-providers":    test.FindProviders,
 	"provide-stress":    test.ProvideStress,
@@ -16,5 +16,5 @@ var testCases = map[string]runtime.TestCaseFn{
 }
 
 func main() {
-	runtime.InvokeMap(testCases)
+	run.InvokeMap(testCases)
 }

@@ -8,14 +8,14 @@
   builder = "docker:go"
   runner = "local:docker"
 
-[[groups]]
-  id = "balsam-undialable-provider"
-  
-  [groups.build]
-    selectors = ["balsam"]
+# [[groups]]
+#  id = "balsam-undialable-provider"
+#  
+#  [groups.build]
+#    selectors = ["balsam"]
 
-  [groups.instances]
-    count = 5
+#  [groups.instances]
+#    count = 8
 
 #   [groups.build]
 #     selectors = ["balsam"]
@@ -49,7 +49,7 @@
 # [[groups]]
 #   id = "balsam-dialable-passive"
 #   [groups.instances]
-#     count = 80
+#     count = 8
 #     percentage = 0.0
 #   [groups.build]
 #     selectors = ["balsam"]
@@ -65,7 +65,7 @@
 # [[groups]]
 #   id = "balsam-dialable-provider"
 #   [groups.instances]
-#     count = 5
+#     count = 8
 #     percentage = 0.0
 #   [groups.build]
 #     selectors = ["balsam"]
@@ -73,8 +73,8 @@
 #     [groups.run.test_params]
 #       bs_strategy = "3"
 #       bucket_size = "10"
-#       expect_dht = "false"
-#       group_order = "7"
+#       expect_dht = "true"
+#       group_order = "5"
 #       record_count = "1"
 #       timeout_secs = "600"
 #       undialable = "false"
@@ -96,14 +96,14 @@
 #       timeout_secs = "600"
 #       undialable = "false"
 
-[[groups]]
-   id = "cypress-passive"
+# [[groups]]
+#    id = "cypress-passive"
 
-   [groups.instances]
-     count = 35
+#    [groups.instances]
+#      count = 8
 
-   [groups.build]
-     selectors = ["cypress"]
+#    [groups.build]
+#      selectors = ["cypress"]
 
 #     [[groups.build.dependencies]]
 #       module = "github.com/libp2p/go-libp2p-kad-dht"
@@ -120,29 +120,31 @@
 #       group_order = "1"
 #       timeout_secs = "600"
 
-# [[groups]]
-#   id = "cypress-provider"
-#   [groups.instances]
-#     count = 5
-#     percentage = 0.0
-#   [groups.build]
-#     selectors = ["cypress"]
+[[groups]]
+  id = "cypress-provider"
+  [groups.instances]
+    count = 16
+    percentage = 0.0
+  [groups.build]
+    selectors = ["cypress"]
 
-#     [[groups.build.dependencies]]
-#       module = "github.com/libp2p/go-libp2p-kad-dht"
-#       version = "180be07b8303d536e39809bc39c58be5407fedd9"
+    [[groups.build.dependencies]]
+      module = "github.com/libp2p/go-libp2p-kad-dht"
+      version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
 
-#     [[groups.build.dependencies]]
-#       module = "github.com/libp2p/go-libp2p-xor"
-#       version = "df24f5b04bcbdc0059b27989163a6090f4f6dc7a"
-#   [groups.run]
-#     [groups.run.test_params]
-#       alpha = "6"
-#       bs_strategy = "3"
-#       bucket_size = "10"
-#       group_order = "2"
-#       record_count = "1"
-#       timeout_secs = "600"
+    [[groups.build.dependencies]]
+      module = "github.com/libp2p/go-libp2p-xor"
+      version = "5c005aca55db27a0dc6d6defaa16c52125f02206"
+  [groups.run]
+    [groups.run.test_params]
+      alpha = "6"
+      bs_strategy = "3"
+      bucket_size = "10"
+      group_order = "1"
+      record_count = "1"
+      timeout_secs = "600"
+      expect_dht = "true"
+      bootstrapper = "true"
 
 # [[groups]]
 #   id = "cypress-searcher"

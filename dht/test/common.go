@@ -12,6 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	sgnetwork "github.com/testground/sdk-go/network"
+	"github.com/testground/sdk-go/ptypes"
 	"github.com/testground/sdk-go/runtime"
 	"github.com/testground/sdk-go/sync"
 
@@ -249,7 +251,7 @@ func NewDHTNode(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts, id
 	return node, dht, nil
 }
 
-func getSubnetAddr(subnet *runtime.IPNet) (*net.TCPAddr, error) {
+func getSubnetAddr(subnet *ptypes.IPNet) (*net.TCPAddr, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, err
@@ -273,7 +275,10 @@ var networkSetupMx gosync.Mutex
 // SetupNetwork instructs the sidecar (if enabled) to setup the network for this
 // test case.
 func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) error {
-	if !ri.RunEnv.TestSidecar {
+
+	client := sgnetwork.NewClient(ri.RunInfo.Client, ri.RunInfo.RunEnv)
+
+	if !ri.RunInfo.RunEnv.TestSidecar {
 		return nil
 	}
 	networkSetupMx.Lock()
@@ -281,7 +286,7 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 	if networkSetupNum == 0 {
 		// Wait for the network to be initialized.
-		if err := ri.Client.WaitNetworkInitialized(ctx, ri.RunEnv); err != nil {
+		if err := client.WaitNetworkInitialized(ctx); err != nil {
 			return err
 		}
 	}
@@ -296,19 +301,26 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 	state := sync.State(fmt.Sprintf("network-configured-%d", networkSetupNum))
 
-	_, _ = ri.Client.Publish(ctx, sync.NetworkTopic(hostname), &sync.NetworkConfig{
+	// TODO: not sure if we have to use a BoundClient of a GenericClient here...
+	bclient, err := sync.NewBoundClient(ctx, ri.RunInfo.RunEnv)
+	if err != nil {
+		return fmt.Errorf("failed to configure bound client: %w", err)
+	}
+
+	topic := sync.NewTopic(hostname, sgnetwork.Config{})
+
+	_, _ = bclient.Publish(ctx, topic, &sgnetwork.Config{
 		Network: "default",
 		Enable:  true,
-		Default: sync.LinkShape{
+		Default: sgnetwork.LinkShape{
 			Latency:   latency,
 			Bandwidth: 10 << 20, // 10Mib
 		},
-		State: state,
 	})
 
-	ri.RunEnv.RecordMessage("finished resetting network latency")
+	ri.RunInfo.RunEnv.RecordMessage("finished resetting network latency")
 
-	err = <-ri.Client.MustBarrier(ctx, state, ri.RunEnv.TestInstanceCount).C
+	err = <-bclient.MustBarrier(ctx, state, ri.RunInfo.RunEnv.TestInstanceCount).C
 	if err != nil {
 		return fmt.Errorf("failed to configure network: %w", err)
 	}
@@ -334,10 +346,10 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 	}
 
 	// TODO: Take opts.NFindPeers into account when setting a minimum?
-	if ri.RunEnv.TestInstanceCount < minTestInstances {
+	if ri.RunInfo.RunEnv.TestInstanceCount < minTestInstances {
 		return nil, fmt.Errorf(
 			"requires at least %d instances, only %d started",
-			minTestInstances, ri.RunEnv.TestInstanceCount,
+			minTestInstances, ri.RunInfo.RunEnv.TestInstanceCount,
 		)
 	}
 
@@ -346,21 +358,21 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 		return nil, err
 	}
 
-	ri.RunEnv.RecordMessage("past the setup network barrier")
+	ri.RunInfo.RunEnv.RecordMessage("past the setup network barrier")
 
 	groupSeq, testSeq, err := utils.GetGroupsAndSeqs(ctx, ri.RunInfo, opts.GroupOrder)
 	if err != nil {
 		return nil, err
 	}
 
-	for g, props := range ri.GroupProperties {
+	for g, props := range ri.RunInfo.GroupProperties {
 		fakeEnv := &runtime.RunEnv{
 			RunParams: runtime.RunParams{TestInstanceParams: props.Params},
 		}
 		ri.DHTGroupProperties[g] = GetCommonOpts(fakeEnv)
 	}
 
-	ri.RunEnv.RecordMessage("past nodeid")
+	ri.RunInfo.RunEnv.RecordMessage("past nodeid")
 
 	rng := rand.New(rand.NewSource(int64(testSeq)))
 	priv, _, err := crypto.GenerateEd25519Key(rng)
@@ -375,25 +387,25 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 			NodeInfo: &tglibp2p.NodeInfo{
 				Seq:      testSeq,
 				GroupSeq: groupSeq,
-				Group:    ri.RunEnv.TestGroupID,
+				Group:    ri.RunInfo.RunEnv.TestGroupID,
 				Addrs:    nil,
 			},
 			Properties: opts,
 		},
 	}
 
-	testNode.host, testNode.dht, err = NewDHTNode(ctx, ri.RunEnv, opts, priv, testNode.info)
+	testNode.host, testNode.dht, err = NewDHTNode(ctx, ri.RunInfo.RunEnv, opts, priv, testNode.info)
 	if err != nil {
 		return nil, err
 	}
-	testNode.info.Addrs = host.InfoFromHost(testNode.host)
+	testNode.info.NodeInfo.Addrs = host.InfoFromHost(testNode.host)
 
 	otherNodes, err := tglibp2p.ShareAddresses(ctx, ri.RunInfo, testNode.info.NodeInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	ri.RunEnv.RecordMessage("finished setup function")
+	ri.RunInfo.RunEnv.RecordMessage("finished setup function")
 
 	outputStart(testNode)
 
@@ -421,7 +433,7 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 	case 1: // Connect to all bootstrappers
 		for _, info := range otherNodes {
 			if info.Properties.Bootstrapper {
-				toDial = append(toDial, *info.Addrs)
+				toDial = append(toDial, *info.NodeInfo.Addrs)
 			}
 		}
 	case 2: // Connect to a random bootstrapper (based on our sequence number)
@@ -429,26 +441,26 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 		var bootstrappers []peer.AddrInfo
 		for _, info := range otherNodes {
 			if info.Properties.Bootstrapper {
-				bootstrappers = append(bootstrappers, *info.Addrs)
+				bootstrappers = append(bootstrappers, *info.NodeInfo.Addrs)
 			}
 		}
 
 		if len(bootstrappers) > 0 {
-			toDial = append(toDial, bootstrappers[nodeInfo.Seq%len(bootstrappers)])
+			toDial = append(toDial, bootstrappers[nodeInfo.NodeInfo.Seq%len(bootstrappers)])
 		}
 	case 3: // Connect to log(n) random bootstrappers (based on our sequence number)
 		// List all the bootstrappers.
 		var bootstrappers []peer.AddrInfo
 		for _, info := range otherNodes {
 			if info.Properties.Bootstrapper {
-				bootstrappers = append(bootstrappers, *info.Addrs)
+				bootstrappers = append(bootstrappers, *info.NodeInfo.Addrs)
 			}
 		}
 
 		added := make(map[int]struct{})
 		if len(bootstrappers) > 0 {
 			targetSize := int(math.Log2(float64(len(bootstrappers)))/2) + 1
-			rng := rand.New(rand.NewSource(int64(nodeInfo.Seq)))
+			rng := rand.New(rand.NewSource(int64(nodeInfo.NodeInfo.Seq)))
 			for i := 0; i < targetSize; i++ {
 				bsIndex := rng.Int() % len(bootstrappers)
 				if _, found := added[bsIndex]; found {
@@ -459,7 +471,7 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 			}
 		}
 	case 4: // dial the _next_ peer in the ring
-		mySeqNo := nodeInfo.Seq
+		mySeqNo := nodeInfo.NodeInfo.Seq
 		var targetSeqNo int
 		if mySeqNo == len(otherNodes) {
 			targetSeqNo = 0
@@ -468,8 +480,8 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 		}
 		// look for the node with sequence number 0
 		for _, info := range otherNodes {
-			if info.Seq == targetSeqNo {
-				toDial = append(toDial, *info.Addrs)
+			if info.NodeInfo.Seq == targetSeqNo {
+				toDial = append(toDial, *info.NodeInfo.Addrs)
 				break
 			}
 		}
@@ -477,16 +489,16 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 		toDial = make([]peer.AddrInfo, 0, len(otherNodes))
 		for _, info := range otherNodes {
 			if !info.Properties.Undialable {
-				toDial = append(toDial, *info.Addrs)
+				toDial = append(toDial, *info.NodeInfo.Addrs)
 			}
 		}
 		return toDial
 	case 6: // connect to log(n) of the network, where n is the number of dialable nodes
 		plist := make([]*DHTNodeInfo, len(otherNodes)+1)
 		for _, info := range otherNodes {
-			plist[info.Seq] = info
+			plist[info.NodeInfo.Seq] = info
 		}
-		plist[nodeInfo.Seq] = nodeInfo
+		plist[nodeInfo.NodeInfo.Seq] = nodeInfo
 
 		numDialable := 0
 		for _, info := range plist {
@@ -500,7 +512,7 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 		nodeLst := make([]*DHTNodeInfo, len(plist))
 		copy(nodeLst, plist)
 		rng := rand.New(rand.NewSource(0))
-		rng = rand.New(rand.NewSource(int64(rng.Int31()) + int64(nodeInfo.Seq)))
+		rng = rand.New(rand.NewSource(int64(rng.Int31()) + int64(nodeInfo.NodeInfo.Seq)))
 		rng.Shuffle(len(nodeLst), func(i, j int) {
 			nodeLst[i], nodeLst[j] = nodeLst[j], nodeLst[i]
 		})
@@ -509,16 +521,16 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 			if len(toDial) > targetSize {
 				break
 			}
-			if info.Seq != nodeInfo.Seq && !info.Properties.Undialable {
-				toDial = append(toDial, *info.Addrs)
+			if info.NodeInfo.Seq != nodeInfo.NodeInfo.Seq && !info.Properties.Undialable {
+				toDial = append(toDial, *info.NodeInfo.Addrs)
 			}
 		}
 	case 7: // connect to log(server nodes) and log(other dialable nodes)
 		plist := make([]*DHTNodeInfo, len(otherNodes)+1)
 		for _, info := range otherNodes {
-			plist[info.Seq] = info
+			plist[info.NodeInfo.Seq] = info
 		}
-		plist[nodeInfo.Seq] = nodeInfo
+		plist[nodeInfo.NodeInfo.Seq] = nodeInfo
 
 		numServer := 0
 		numOtherDialable := 0
@@ -534,14 +546,14 @@ func GetBootstrapNodes(ri *DHTRunInfo) []peer.AddrInfo {
 		targetOtherNodes := int(math.Log2(float64(numOtherDialable/2))) + 1
 
 		serverAddrs := getBootstrapAddrs(plist, nodeInfo, targetServerNodes, 0, func(info *DHTNodeInfo) bool {
-			if info.Seq != nodeInfo.Seq && info.Properties.ExpectedServer {
+			if info.NodeInfo.Seq != nodeInfo.NodeInfo.Seq && info.Properties.ExpectedServer {
 				return true
 			}
 			return false
 		})
 
 		otherAddrs := getBootstrapAddrs(plist, nodeInfo, targetOtherNodes, 0, func(info *DHTNodeInfo) bool {
-			if info.Seq != nodeInfo.Seq && info.Properties.ExpectedServer {
+			if info.NodeInfo.Seq != nodeInfo.NodeInfo.Seq && info.Properties.ExpectedServer {
 				return true
 			}
 			return false
@@ -559,7 +571,7 @@ func getBootstrapAddrs(plist []*DHTNodeInfo, nodeInfo *DHTNodeInfo, targetSize i
 	nodeLst := make([]*DHTNodeInfo, len(plist))
 	copy(nodeLst, plist)
 	rng := rand.New(rand.NewSource(rngSeed))
-	rng = rand.New(rand.NewSource(int64(rng.Int31()) + int64(nodeInfo.Seq)))
+	rng = rand.New(rand.NewSource(int64(rng.Int31()) + int64(nodeInfo.NodeInfo.Seq)))
 	rng.Shuffle(len(nodeLst), func(i, j int) {
 		nodeLst[i], nodeLst[j] = nodeLst[j], nodeLst[i]
 	})
@@ -569,7 +581,7 @@ func getBootstrapAddrs(plist []*DHTNodeInfo, nodeInfo *DHTNodeInfo, targetSize i
 			break
 		}
 		if valid(info) {
-			toDial = append(toDial, *info.Addrs)
+			toDial = append(toDial, *info.NodeInfo.Addrs)
 		}
 	}
 	return
@@ -587,14 +599,14 @@ func getBootstrapAddrs(plist []*DHTNodeInfo, nodeInfo *DHTNodeInfo, targetSize i
 //     b. Re-connect to at least one node if we've disconnected from _all_ nodes.
 //     We may want to make this an error in the future?
 func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrInfo) error {
-	runenv := ri.RunEnv
+	runenv := ri.RunInfo.RunEnv
 
 	defer runenv.RecordMessage("bootstrap phase ended")
 
 	node := ri.Node
 	dht := node.dht
 
-	stager := utils.NewBatchStager(ctx, node.info.Seq, runenv.TestInstanceCount, "bootstrapping", ri.RunInfo)
+	stager := utils.NewBatchStager(ctx, node.info.NodeInfo.Seq, runenv.TestInstanceCount, "bootstrapping", ri.RunInfo)
 
 	////////////////
 	// 1: CONNECT //
@@ -604,7 +616,7 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 
 	// Wait until it's our turn to bootstrap
 
-	gradualBsStager := utils.NewGradualStager(ctx, node.info.Seq, runenv.TestInstanceCount,
+	gradualBsStager := utils.NewGradualStager(ctx, node.info.NodeInfo.Seq, runenv.TestInstanceCount,
 		"boostrap-gradual", ri.RunInfo, utils.LinearGradualStaging(100))
 	if err := gradualBsStager.Begin(); err != nil {
 		return err
@@ -945,9 +957,9 @@ func outputGraph(dht *kaddht.IpfsDHT, graphID string) {
 
 func outputStart(node *NodeParams) {
 	nodeLogger.Infow("nodeparams",
-		"seq", node.info.Seq,
+		"seq", node.info.NodeInfo.Seq,
 		"dialable", !node.info.Properties.Undialable,
-		"peerID", node.info.Addrs.ID.Pretty(),
-		"addrs", node.info.Addrs.Addrs,
+		"peerID", node.info.NodeInfo.Addrs.ID.Pretty(),
+		"addrs", node.info.NodeInfo.Addrs.Addrs,
 	)
 }
