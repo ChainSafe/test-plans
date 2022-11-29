@@ -278,8 +278,6 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 	client := sgnetwork.NewClient(ri.RunInfo.Client, ri.RunInfo.RunEnv)
 
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, client: ", client)
-
 	if !ri.RunInfo.RunEnv.TestSidecar {
 		return nil
 	}
@@ -288,14 +286,12 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 	if networkSetupNum == 0 {
 		// Wait for the network to be initialized.
-		ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, network setup number: ", networkSetupNum)
 		if err := client.WaitNetworkInitialized(ctx); err != nil {
 			return err
 		}
 	}
 
 	networkSetupNum++
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, increment network setup number: ", networkSetupNum)
 
 	// TODO: just put the unique testplan id inside the runenv?
 	hostname, err := os.Hostname()
@@ -303,15 +299,11 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 		return err
 	}
 
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, hostname: ", hostname)
-
 	// TODO: not sure if we have to use a BoundClient of a GenericClient here...
 	bclient, err := sync.NewBoundClient(ctx, ri.RunInfo.RunEnv)
 	if err != nil {
 		return fmt.Errorf("SetupNetwork, failed to configure bound client: %w", err)
 	}
-
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, bound client: ", bclient)
 
 	topic := sync.NewTopic(hostname, sgnetwork.Config{})
 
@@ -326,11 +318,6 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 	if err != nil {
 		return fmt.Errorf("SetupNetwork, failed to publish to client: %w", err)
 	}
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, published to client: ", sequence)
-
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, finished resetting network latency")
-
-	ri.RunInfo.RunEnv.RecordMessage("SetupNetwork, must barrier with test instance count: ", ri.RunInfo.RunEnv.TestInstanceCount)
 
 	/**
 	state := sync.State(fmt.Sprintf("network-configured-%d", networkSetupNum))
@@ -351,13 +338,11 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 // Setup sets up the elements necessary for the test cases
 func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRunInfo, error) {
-	runenv.RecordMessage("Setup, init assets")
 	if err := initAssets(runenv); err != nil {
 		return nil, err
 	}
 
 	client := sync.MustBoundClient(ctx, runenv)
-	runenv.RecordMessage("Setup, client: ", client)
 
 	//defer watcher.Close()
 	//defer writer.Close()
@@ -378,26 +363,15 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 		)
 	}
 
-	runenv.RecordMessage("Setup, setting up network")
 	err := SetupNetwork(ctx, ri, 0)
 	if err != nil {
-		runenv.RecordMessage("Setup, network setup error: ", err)
 		return nil, err
 	}
-
-	runenv.RecordMessage("Setup, past the setup network barrier")
-	// ri.RunInfo.RunEnv.RecordMessage("past the setup network barrier")
-
-	runenv.RecordMessage("Setup, network setup complete")
 
 	groupSeq, testSeq, err := utils.GetGroupsAndSeqs(ctx, ri.RunInfo, opts.GroupOrder)
 	if err != nil {
 		return nil, err
 	}
-	runenv.RecordMessage("Setup, groupSeq: ", groupSeq)
-	// ri.RunInfo.RunEnv.RecordMessage("Setup, groupSeq: ", groupSeq)
-	runenv.RecordMessage("Setup, testSeq: ", testSeq)
-	// ri.RunInfo.RunEnv.RecordMessage("Setup, testSeq: ", testSeq)
 
 	for g, props := range ri.RunInfo.GroupProperties {
 		fakeEnv := &runtime.RunEnv{
@@ -405,9 +379,6 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 		}
 		ri.DHTGroupProperties[g] = GetCommonOpts(fakeEnv)
 	}
-
-	runenv.RecordMessage("Setup, past nodeid")
-	// ri.RunInfo.RunEnv.RecordMessage("past nodeid")
 
 	rng := rand.New(rand.NewSource(int64(testSeq)))
 	priv, _, err := crypto.GenerateEd25519Key(rng)
@@ -431,23 +402,14 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 
 	testNode.host, testNode.dht, err = NewDHTNode(ctx, ri.RunInfo.RunEnv, opts, priv, testNode.info)
 	if err != nil {
-		runenv.RecordMessage("Setup, new dht node err: ", err)
 		return nil, err
 	}
 	testNode.info.NodeInfo.Addrs = host.InfoFromHost(testNode.host)
-
-	runenv.RecordMessage("Setup, successfully set up new dht node")
-	runenv.RecordMessage("Setup, dht node host: ", testNode.host)
-	runenv.RecordMessage("Setup, dht node dht: ", testNode.dht)
-	runenv.RecordMessage("Setup, dht node addrs: ", testNode.info.NodeInfo.Addrs)
 
 	otherNodes, err := tglibp2p.ShareAddresses(ctx, ri.RunInfo, testNode.info.NodeInfo)
 	if err != nil {
 		return nil, err
 	}
-
-	runenv.RecordMessage("Setup, finished setup function")
-	// ri.RunInfo.RunEnv.RecordMessage("finished setup function")
 
 	outputStart(testNode)
 
@@ -461,8 +423,6 @@ func Setup(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts) (*DHTRu
 
 	ri.Node = testNode
 	ri.Others = otherDHTNodes
-
-	runenv.RecordMessage("Setup, ri: ", ri)
 
 	return ri, nil
 }
@@ -660,8 +620,6 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 	// 1: CONNECT //
 	////////////////
 
-	runenv.RecordMessage("Bootstrap: begin connect")
-
 	// Wait until it's our turn to bootstrap
 
 	gradualBsStager := utils.NewGradualStager(ctx, node.info.NodeInfo.Seq, runenv.TestInstanceCount,
@@ -670,14 +628,10 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 		return err
 	}
 
-	runenv.RecordMessage("Bootstrap: dialing %v", bootstrapNodes)
-
 	// Connect to our peers.
 	if err := Connect(ctx, runenv, dht, bootstrapNodes...); err != nil {
 		return err
 	}
-
-	runenv.RecordMessage("Bootstrap: dialed %d other peers", len(bootstrapNodes))
 
 	// TODO: Use an updated autonat that doesn't require this
 	// Wait for Autonat to kick in
@@ -692,10 +646,7 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 		ticker := time.NewTicker(time.Second * 5)
 		for {
 			<-ticker.C
-			runenv.RecordMessage("Bootstrap, dht.RoutingTable().Size(): ", dht.RoutingTable().Size())
-			runenv.RecordMessage("Bootstrap, listing boostrap nodes: ", bootstrapNodes)
 			if dht.RoutingTable().Size() < 2 {
-				runenv.RecordMessage("Bootstrap, routing table size < 2... size: ", dht.RoutingTable().Size())
 				_ = Connect(ctx, runenv, dht, bootstrapNodes...)
 			}
 		}
@@ -709,10 +660,6 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 	if err := WaitRoutingTable(ctx, runenv, dht); err != nil {
 		return err
 	}
-
-	runenv.RecordMessage("Bootstrap: have peer in routing table")
-
-	runenv.RecordMessage("Bootstrap: begin routing")
 
 	outputGraph(dht, "br")
 
@@ -741,8 +688,6 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 			ready = true
 		}
 	}
-
-	runenv.RecordMessage("Bootstrap: table ready")
 
 	// TODO: Repeat this a few times until our tables have stabilized? That
 	// _shouldn't_ be necessary.
@@ -840,7 +785,6 @@ func Bootstrap(ctx context.Context, ri *DHTRunInfo, bootstrapNodes []peer.AddrIn
 //
 // Automatically skips our own peer.
 func Connect(ctx context.Context, runenv *runtime.RunEnv, dht *kaddht.IpfsDHT, toDial ...peer.AddrInfo) error {
-	runenv.RecordMessage("Connect, tryConnecting")
 	tryConnect := func(ctx context.Context, ai peer.AddrInfo, attempts int) error {
 		var err error
 		for i := 1; i <= attempts; i++ {
@@ -867,24 +811,19 @@ func Connect(ctx context.Context, runenv *runtime.RunEnv, dht *kaddht.IpfsDHT, t
 	numFailedConnections := 0
 	numAttemptedConnections := 0
 
-	runenv.RecordMessage("Connect, dialing to ", len(toDial), " peers")
 	for _, ai := range toDial {
 		if ai.ID == dht.Host().ID() {
 			continue
 		}
 		numAttemptedConnections++
-		runenv.RecordMessage("Connect, numAttemptedConnections: ", numAttemptedConnections)
 		if err = tryConnect(ctx, ai, 3); err != nil {
-			runenv.RecordMessage("Connect, tryConnect numFailedConnections: ", numFailedConnections)
 			numFailedConnections++
 		}
 	}
 	if float64(numFailedConnections)/float64(numAttemptedConnections) > 0.75 {
-		runenv.RecordMessage("float64(numFailedConnections)/float64(numAttemptedConnections) > 0.75: ", float64(numFailedConnections)/float64(numAttemptedConnections) > 0.75)
 		return errors.Wrap(err, "too high percentage of failed connections")
 	}
 	if numAttemptedConnections-numFailedConnections <= 1 {
-		runenv.RecordMessage("numAttemptedConnections-numFailedConnections <= 1: ", numAttemptedConnections-numFailedConnections <= 1)
 		return errors.Wrap(err, "insufficient connections formed")
 	}
 
@@ -902,16 +841,10 @@ func RandomWalk(ctx context.Context, runenv *runtime.RunEnv, dht *kaddht.IpfsDHT
 }
 
 func Base(ctx context.Context, runenv *runtime.RunEnv, commonOpts *SetupOpts) (*DHTRunInfo, error) {
-
-	runenv.RecordMessage("Base, setting up specialized query")
-
 	ectx := specializedTraceQuery(ctx, runenv, "bootstrap-network")
-	runenv.RecordMessage("Base, specialized query: ", ectx)
 
 	ri, err := Setup(ectx, runenv, commonOpts)
-	runenv.RecordMessage("Base, ri: ", ri)
 	if err != nil {
-		runenv.RecordMessage("Base, setup error: ", err)
 		return nil, err
 	}
 
@@ -922,17 +855,12 @@ func Base(ctx context.Context, runenv *runtime.RunEnv, commonOpts *SetupOpts) (*
 	// }
 	// runenv.RecordStart()
 
-	runenv.RecordMessage("Base, Setting up bootstrapping")
-
 	// Bring the network into a nice, stable, bootstrapped state.
 	if err = Bootstrap(ectx, ri, GetBootstrapNodes(ri)); err != nil {
-		runenv.RecordMessage("Base, bootstrap error: ", err)
 		return nil, err
 	}
-	runenv.RecordMessage("Base, completed boostrap")
 
 	if commonOpts.RandomWalk {
-		runenv.RecordMessage("Base, random walk network")
 		if err = RandomWalk(ectx, runenv, ri.Node.dht); err != nil {
 			runenv.RecordMessage("Base, random walk error: ", err)
 			return nil, err
