@@ -13,6 +13,7 @@ import (
 
 	"github.com/ipfs/go-cid"
 	u "github.com/ipfs/go-ipfs-util"
+	"github.com/testground/sdk-go/run"
 	"github.com/testground/sdk-go/runtime"
 )
 
@@ -36,7 +37,9 @@ func getFindProvsParams(params map[string]string) findProvsParams {
 	return fpOpts
 }
 
-func FindProviders(runenv *runtime.RunEnv) error {
+func FindProviders(runenv *runtime.RunEnv, initCtx *run.InitContext) error {
+	runenv.RecordMessage("Finding providers")
+
 	commonOpts := GetCommonOpts(runenv)
 
 	ctx, cancel := context.WithTimeout(context.Background(), commonOpts.Timeout)

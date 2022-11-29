@@ -77,12 +77,15 @@ func (s *BatchStager) End() error {
 		return err
 	}
 
+	s.ri.RunEnv.RecordMessage("name: signal %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
 	s.ri.RunEnv.R().RecordPoint("signal "+string(stage), float64(time.Since(t).Nanoseconds()))
 
 	t = time.Now()
+	s.ri.RunEnv.RecordMessage("name: barrier %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
 	err = <-s.ri.Client.MustBarrier(s.ctx, stage, s.total).C
 	s.ri.RunEnv.R().RecordPoint("barrier"+string(stage), float64(time.Since(t).Nanoseconds()))
 
+	s.ri.RunEnv.RecordMessage("name: full %s; uint: ns; time: %d", string(stage), float64(time.Since(t).Nanoseconds()))
 	s.ri.RunEnv.R().RecordPoint("full "+string(stage), float64(time.Since(s.t).Nanoseconds()))
 
 	// sdk-go v0.1.1 implementation

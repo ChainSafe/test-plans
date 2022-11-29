@@ -7,7 +7,7 @@ import (
 
 var testCases = map[string]interface{}{
 	"find-peers":        test.FindPeers,
-	"find-providers":    test.FindProviders,
+	"find-providers":    run.InitializedTestCaseFn(test.FindProviders),
 	"provide-stress":    test.ProvideStress,
 	"store-get-value":   test.StoreGetValue,
 	"get-closest-peers": test.GetClosestPeers,
