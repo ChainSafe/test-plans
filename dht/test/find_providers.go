@@ -11,7 +11,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 
-	"github.com/ipfs/go-cid"
+	cid "github.com/ipfs/go-cid"
 	u "github.com/ipfs/go-ipfs-util"
 	"github.com/testground/sdk-go/run"
 	"github.com/testground/sdk-go/runtime"
@@ -118,87 +118,89 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 		return err
 	}
 
-	if fpOpts.SearchRecords {
-		g := errgroup.Group{}
-		for _, record := range searchRecords {
-			for index, cid := range record.RecordIDs {
-				i := index
-				c := cid
-				groupID := record.GroupID
-				g.Go(func() error {
-					p := peer.ID(c.Bytes())
-					ectx, cancel := context.WithCancel(ctx) //nolint
-					ectx = TraceQuery(ctx, runenv, node, p.Pretty(), "provider-records")
-					t := time.Now()
+	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
+	// if fpOpts.SearchRecords {
+	g := errgroup.Group{}
+	for _, record := range searchRecords {
+		for index, cid := range record.RecordIDs {
+			i := index
+			c := cid
+			groupID := record.GroupID
+			g.Go(func() error {
+				p := peer.ID(c.Bytes())
+				ectx, cancel := context.WithCancel(ctx) //nolint
+				ectx = TraceQuery(ctx, runenv, node, p.Pretty(), "provider-records")
+				t := time.Now()
 
-					numProvs := 0
-					provsCh := node.dht.FindProvidersAsync(ectx, c, getAllProvRecordsNum())
-					status := "done"
+				numProvs := 0
+				provsCh := node.dht.FindProvidersAsync(ectx, c, getAllProvRecordsNum())
+				status := "done"
 
-					var tLastFound time.Time
-				provLoop:
-					for {
-						select {
-						case _, ok := <-provsCh:
-							if !ok {
-								break provLoop
-							}
-
-							tLastFound = time.Now()
-
-							if numProvs == 0 {
-								ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-find-first|%s|%d", groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-								// runenv.RecordMetric(&runtime.MetricDefinition{
-								// 	Name:           fmt.Sprintf("time-to-find-first|%s|%d", groupID, i),
-								// 	Unit:           "ns",
-								// 	ImprovementDir: -1,
-								// }, float64(tLastFound.Sub(t).Nanoseconds()))
-							}
-
-							numProvs++
-						case <-ctx.Done():
-							status = "incomplete"
+				var tLastFound time.Time
+			provLoop:
+				for {
+					select {
+					case _, ok := <-provsCh:
+						if !ok {
+							// runenv.RecordMessage("testProviderRecords, provLoop ok: ", ok)
 							break provLoop
 						}
-					}
-					cancel()
 
-					if numProvs > 0 {
-						ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-						// runenv.RecordMetric(&runtime.MetricDefinition{
-						// 	Name:           fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i),
-						// 	Unit:           "ns",
-						// 	ImprovementDir: -1,
-						// }, float64(tLastFound.Sub(t).Nanoseconds()))
-					} else if status != "incomplete" {
-						status = "fail"
-					}
+						tLastFound = time.Now()
 
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i), float64(time.Since(t).Nanoseconds()))
+						if numProvs == 0 {
+							runenv.R().RecordPoint(fmt.Sprintf("time-to-find-first|%s|%d", groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
+							// runenv.RecordMetric(&runtime.MetricDefinition{
+							// 	Name:           fmt.Sprintf("time-to-find-first|%s|%d", groupID, i),
+							// 	Unit:           "ns",
+							// 	ImprovementDir: -1,
+							// }, float64(tLastFound.Sub(t).Nanoseconds()))
+						}
+
+						numProvs++
+					case <-ctx.Done():
+						status = "incomplete"
+						break provLoop
+					}
+				}
+				cancel()
+
+				if numProvs > 0 {
+					runenv.R().RecordPoint(fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
 					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i),
+					// 	Name:           fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i),
 					// 	Unit:           "ns",
 					// 	ImprovementDir: -1,
-					// }, float64(time.Since(t).Nanoseconds()))
+					// }, float64(tLastFound.Sub(t).Nanoseconds()))
+				} else if status != "incomplete" {
+					status = "fail"
+				}
 
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i), float64(numProvs))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i),
-					// 	Unit:           "peers",
-					// 	ImprovementDir: 1,
-					// }, float64(numProvs))
+				runenv.R().RecordPoint(fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i), float64(time.Since(t).Nanoseconds()))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i),
+				// 	Unit:           "ns",
+				// 	ImprovementDir: -1,
+				// }, float64(time.Since(t).Nanoseconds()))
 
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i), float64(ri.GroupProperties[groupID].Size-numProvs))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i),
-					// 	Unit:           "peers",
-					// 	ImprovementDir: -1,
-					// }, float64(ri.GroupProperties[groupID].Size-numProvs))
+				runenv.R().RecordPoint(fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i), float64(numProvs))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i),
+				// 	Unit:           "peers",
+				// 	ImprovementDir: 1,
+				// }, float64(numProvs))
 
-					return nil
-				})
-			}
+				runenv.R().RecordPoint(fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i), float64(ri.GroupProperties[groupID].Size-numProvs))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i),
+				// 	Unit:           "peers",
+				// 	ImprovementDir: -1,
+				// }, float64(ri.GroupProperties[groupID].Size-numProvs))
+
+				return nil
+			})
 		}
+		// }
 
 		if err := g.Wait(); err != nil {
 			_ = stager.End()
@@ -216,32 +218,47 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 // sync service which nodes our group plans on advertising
 func getRecords(ri *DHTRunInfo, fpOpts findProvsParams) ([]cid.Cid, []*ProviderRecordSubmission) {
 	recGen := func(groupID string, groupFPOpts findProvsParams) (out []cid.Cid) {
+		ri.RunEnv.RecordMessage("getRecords, groupID: ", groupID)
+		ri.RunEnv.RecordMessage("getRecords, groupFPOpts: ", groupFPOpts)
+
 		for i := 0; i < groupFPOpts.RecordCount; i++ {
 			c := fmt.Sprintf("CID %d - group %s - seeded with %d", i, groupID, groupFPOpts.RecordSeed)
+			ri.RunEnv.RecordMessage("getRecords, c: ", c)
 			out = append(out, cid.NewCidV0(u.Hash([]byte(c))))
 		}
+		ri.RunEnv.RecordMessage("getRecords, out: ", out)
 		return out
 	}
 
 	var emitRecords []cid.Cid
+	ri.RunEnv.RecordMessage("getRecords, fpOpts.RecordCount: ", fpOpts.RecordCount)
 	if fpOpts.RecordCount > 0 {
 		// Calculate the CIDs we're dealing with.
+		ri.RunEnv.RecordMessage("getRecords, record count > 0")
 		emitRecords = recGen(ri.Node.info.Group, fpOpts)
 	}
 
+	ri.RunEnv.RecordMessage("getRecords, emitRecords: ", emitRecords)
+
 	var searchRecords []*ProviderRecordSubmission
-	if fpOpts.SearchRecords {
-		for _, g := range ri.Groups {
-			gOpts := ri.GroupProperties[g]
-			groupFPOpts := getFindProvsParams(gOpts.Params)
-			if groupFPOpts.RecordCount > 0 {
-				searchRecords = append(searchRecords, &ProviderRecordSubmission{
-					RecordIDs: recGen(g, groupFPOpts),
-					GroupID:   g,
-				})
-			}
+
+	ri.RunEnv.RecordMessage("getRecords, ri.RunInfo.Groups", ri.RunInfo.Groups)
+
+	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
+	// if fpOpts.SearchRecords {
+	for _, g := range ri.RunInfo.Groups {
+		gOpts := ri.RunInfo.GroupProperties[g]
+		groupFPOpts := getFindProvsParams(gOpts.Params)
+		if groupFPOpts.RecordCount > 0 {
+			searchRecords = append(searchRecords, &ProviderRecordSubmission{
+				RecordIDs: recGen(g, groupFPOpts),
+				GroupID:   g,
+			})
 		}
 	}
+	// }
+
+	ri.RunEnv.RecordMessage("getRecords, searchRecords: ", searchRecords)
 
 	return emitRecords, searchRecords
 }

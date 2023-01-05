@@ -145,116 +145,117 @@ func getIPNSRecord(ctx context.Context, ri *DHTRunInfo, fpOpts findProvsParams, 
 		return err
 	}
 
-	if fpOpts.SearchRecords {
-		g := errgroup.Group{}
-		for _, record := range searchRecords {
-			for index, key := range record.RecordIDs {
-				i := index
-				k := key
-				groupID := record.GroupID
-				g.Go(func() error {
-					ectx, cancel := context.WithCancel(ctx) //nolint
-					ectx = TraceQuery(ctx, runenv, node, k, "ipns-records")
-					t := time.Now()
+	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
+	// if fpOpts.SearchRecords {
+	g := errgroup.Group{}
+	for _, record := range searchRecords {
+		for index, key := range record.RecordIDs {
+			i := index
+			k := key
+			groupID := record.GroupID
+			g.Go(func() error {
+				ectx, cancel := context.WithCancel(ctx) //nolint
+				ectx = TraceQuery(ctx, runenv, node, k, "ipns-records")
+				t := time.Now()
 
-					runenv.RecordMessage("Searching for IPNS Key: %s", k)
-					numRecs := 0
-					recordCh, err := node.dht.SearchValue(ectx, k)
-					if err != nil {
-						runenv.RecordMessage("Failed to Search for IPNS Key: %s : err: %s", k, err)
-						ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-failed-put-%d", i), float64(time.Since(t).Nanoseconds()))
-						// runenv.RecordMetric(&runtime.MetricDefinition{
-						// 	Name:           fmt.Sprintf("time-to-failed-put-%d", i),
-						// 	Unit:           "ns",
-						// 	ImprovementDir: -1,
-						// }, float64(time.Since(t).Nanoseconds()))
-						return nil //nolint
-					}
-					status := "done"
-
-					var tLastFound time.Time
-					var lastRec []byte
-				searchLoop:
-					for {
-						select {
-						case rec, ok := <-recordCh:
-							if !ok {
-								break searchLoop
-							}
-							lastRec = rec
-
-							tLastFound = time.Now()
-
-							if numRecs == 0 {
-								ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get-first|%s|%d", groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-								// runenv.RecordMetric(&runtime.MetricDefinition{
-								// 	Name:           fmt.Sprintf("time-to-get-first|%s|%d", groupID, i),
-								// 	Unit:           "ns",
-								// 	ImprovementDir: -1,
-								// }, float64(tLastFound.Sub(t).Nanoseconds()))
-							}
-
-							numRecs++
-						case <-ctx.Done():
-							break searchLoop
-						}
-					}
-					cancel()
-
-					if numRecs > 0 {
-						ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get-last|%s|%s|%d", status, groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-						// runenv.RecordMetric(&runtime.MetricDefinition{
-						// 	Name:           fmt.Sprintf("time-to-get-last|%s|%s|%d", status, groupID, i),
-						// 	Unit:           "ns",
-						// 	ImprovementDir: -1,
-						// }, float64(tLastFound.Sub(t).Nanoseconds()))
-
-						ri.RunEnv.R().RecordPoint(fmt.Sprintf("record-updates|%s|%s|%d|%d", status, groupID, recNum, i), float64(numRecs))
-						// runenv.RecordMetric(&runtime.MetricDefinition{
-						// 	Name:           fmt.Sprintf("record-updates|%s|%s|%d|%d", status, groupID, recNum, i),
-						// 	Unit:           "records",
-						// 	ImprovementDir: -1,
-						// }, float64(numRecs))
-
-						if len(lastRec) == 0 {
-							panic("this should not be possible")
-						}
-
-						recordResult := &ipns_pb.IpnsEntry{}
-						if err := recordResult.Unmarshal(lastRec); err != nil {
-							panic(fmt.Errorf("received invalid IPNS record: err %v", err))
-						}
-
-						if diff := int(*recordResult.Sequence) - recNum; diff > 0 {
-							ri.RunEnv.R().RecordPoint(fmt.Sprintf("incomplete-get|%s|%d|%d", groupID, recNum, i), float64(diff))
-							// runenv.RecordMetric(&runtime.MetricDefinition{
-							// 	Name:           fmt.Sprintf("incomplete-get|%s|%d|%d", groupID, recNum, i),
-							// 	Unit:           "records",
-							// 	ImprovementDir: -1,
-							// }, float64(diff))
-							status = "fail"
-						}
-
-					} else {
-						status = "fail"
-					}
-
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get|%s|%s|%d|%d", status, groupID, recNum, i), float64(time.Since(t).Nanoseconds()))
+				runenv.RecordMessage("Searching for IPNS Key: %s", k)
+				numRecs := 0
+				recordCh, err := node.dht.SearchValue(ectx, k)
+				if err != nil {
+					runenv.RecordMessage("Failed to Search for IPNS Key: %s : err: %s", k, err)
+					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-failed-put-%d", i), float64(time.Since(t).Nanoseconds()))
 					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("time-to-get|%s|%s|%d|%d", status, groupID, recNum, i),
+					// 	Name:           fmt.Sprintf("time-to-failed-put-%d", i),
 					// 	Unit:           "ns",
 					// 	ImprovementDir: -1,
 					// }, float64(time.Since(t).Nanoseconds()))
+					return nil //nolint
+				}
+				status := "done"
 
-					return nil
-				})
-			}
-		}
+				var tLastFound time.Time
+				var lastRec []byte
+			searchLoop:
+				for {
+					select {
+					case rec, ok := <-recordCh:
+						if !ok {
+							break searchLoop
+						}
+						lastRec = rec
 
-		if err := g.Wait(); err != nil {
-			panic("how is this possible?")
+						tLastFound = time.Now()
+
+						if numRecs == 0 {
+							ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get-first|%s|%d", groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
+							// runenv.RecordMetric(&runtime.MetricDefinition{
+							// 	Name:           fmt.Sprintf("time-to-get-first|%s|%d", groupID, i),
+							// 	Unit:           "ns",
+							// 	ImprovementDir: -1,
+							// }, float64(tLastFound.Sub(t).Nanoseconds()))
+						}
+
+						numRecs++
+					case <-ctx.Done():
+						break searchLoop
+					}
+				}
+				cancel()
+
+				if numRecs > 0 {
+					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get-last|%s|%s|%d", status, groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
+					// runenv.RecordMetric(&runtime.MetricDefinition{
+					// 	Name:           fmt.Sprintf("time-to-get-last|%s|%s|%d", status, groupID, i),
+					// 	Unit:           "ns",
+					// 	ImprovementDir: -1,
+					// }, float64(tLastFound.Sub(t).Nanoseconds()))
+
+					ri.RunEnv.R().RecordPoint(fmt.Sprintf("record-updates|%s|%s|%d|%d", status, groupID, recNum, i), float64(numRecs))
+					// runenv.RecordMetric(&runtime.MetricDefinition{
+					// 	Name:           fmt.Sprintf("record-updates|%s|%s|%d|%d", status, groupID, recNum, i),
+					// 	Unit:           "records",
+					// 	ImprovementDir: -1,
+					// }, float64(numRecs))
+
+					if len(lastRec) == 0 {
+						panic("this should not be possible")
+					}
+
+					recordResult := &ipns_pb.IpnsEntry{}
+					if err := recordResult.Unmarshal(lastRec); err != nil {
+						panic(fmt.Errorf("received invalid IPNS record: err %v", err))
+					}
+
+					if diff := int(*recordResult.Sequence) - recNum; diff > 0 {
+						ri.RunEnv.R().RecordPoint(fmt.Sprintf("incomplete-get|%s|%d|%d", groupID, recNum, i), float64(diff))
+						// runenv.RecordMetric(&runtime.MetricDefinition{
+						// 	Name:           fmt.Sprintf("incomplete-get|%s|%d|%d", groupID, recNum, i),
+						// 	Unit:           "records",
+						// 	ImprovementDir: -1,
+						// }, float64(diff))
+						status = "fail"
+					}
+
+				} else {
+					status = "fail"
+				}
+
+				ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-get|%s|%s|%d|%d", status, groupID, recNum, i), float64(time.Since(t).Nanoseconds()))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("time-to-get|%s|%s|%d|%d", status, groupID, recNum, i),
+				// 	Unit:           "ns",
+				// 	ImprovementDir: -1,
+				// }, float64(time.Since(t).Nanoseconds()))
+
+				return nil
+			})
 		}
 	}
+
+	if err := g.Wait(); err != nil {
+		panic("how is this possible?")
+	}
+	// }
 
 	if err := stager.End(); err != nil {
 		return err
@@ -293,30 +294,31 @@ func generateIPNSRecords(ri *DHTRunInfo, fpOpts findProvsParams) (emitRecords []
 		}
 	}
 
-	if fpOpts.SearchRecords {
-		for _, g := range ri.Groups {
-			gOpts := ri.GroupProperties[g]
-			groupFPOpts := getFindProvsParams(gOpts.Params)
-			if groupFPOpts.RecordCount > 0 {
-				recs, err := recGen(g, groupFPOpts)
+	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
+	// if fpOpts.SearchRecords {
+	for _, g := range ri.Groups {
+		gOpts := ri.GroupProperties[g]
+		groupFPOpts := getFindProvsParams(gOpts.Params)
+		if groupFPOpts.RecordCount > 0 {
+			recs, err := recGen(g, groupFPOpts)
+			if err != nil {
+				return nil, nil, err
+			}
+			ipnsKeys := make([]string, len(recs))
+			for i, k := range recs {
+				pid, err := peer.IDFromPrivateKey(k)
 				if err != nil {
 					return nil, nil, err
 				}
-				ipnsKeys := make([]string, len(recs))
-				for i, k := range recs {
-					pid, err := peer.IDFromPrivateKey(k)
-					if err != nil {
-						return nil, nil, err
-					}
-					ipnsKeys[i] = ipns.RecordKey(pid)
-				}
-				searchRecords = append(searchRecords, &RecordSubmission{
-					RecordIDs: ipnsKeys,
-					GroupID:   g,
-				})
+				ipnsKeys[i] = ipns.RecordKey(pid)
 			}
+			searchRecords = append(searchRecords, &RecordSubmission{
+				RecordIDs: ipnsKeys,
+				GroupID:   g,
+			})
 		}
 	}
+	// }
 
 	return
 }

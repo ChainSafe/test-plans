@@ -69,53 +69,54 @@ func TestGetClosestPeers(ctx context.Context, ri *DHTRunInfo) error {
 	}
 
 	runenv.RecordMessage("start gcp loop")
-	if fpOpts.SearchRecords {
-		g := errgroup.Group{}
-		for index, cid := range cids {
-			i := index
-			c := cid
-			g.Go(func() error {
-				p := peer.ID(c.Bytes())
-				ectx, cancel := context.WithCancel(ctx)
-				ectx = TraceQuery(ectx, runenv, node, p.Pretty(), "get-closest-peers")
-				t := time.Now()
-				pids, err := node.dht.GetClosestPeers(ectx, c.KeyString())
-				cancel()
+	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
+	// if fpOpts.SearchRecords {
+	g := errgroup.Group{}
+	for index, cid := range cids {
+		i := index
+		c := cid
+		g.Go(func() error {
+			p := peer.ID(c.Bytes())
+			ectx, cancel := context.WithCancel(ctx)
+			ectx = TraceQuery(ectx, runenv, node, p.Pretty(), "get-closest-peers")
+			t := time.Now()
+			pids, err := node.dht.GetClosestPeers(ectx, c.KeyString())
+			cancel()
 
-				peers := make([]peer.ID, 0, node.info.Properties.BucketSize)
-				for _, p := range pids {
-					peers = append(peers, p)
-				}
+			peers := make([]peer.ID, 0, node.info.Properties.BucketSize)
+			for _, p := range pids {
+				peers = append(peers, p)
+			}
 
-				if err == nil {
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-gcp-%d", i), float64(time.Since(t).Nanoseconds()))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("time-to-gcp-%d", i),
-					// 	Unit:           "ns",
-					// 	ImprovementDir: -1,
-					// }, float64(time.Since(t).Nanoseconds()))
+			if err == nil {
+				ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-gcp-%d", i), float64(time.Since(t).Nanoseconds()))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("time-to-gcp-%d", i),
+				// 	Unit:           "ns",
+				// 	ImprovementDir: -1,
+				// }, float64(time.Since(t).Nanoseconds()))
 
-					ri.RunEnv.R().RecordPoint(fmt.Sprintf("gcp-peers-found-%d", i), float64(len(pids)))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("gcp-peers-found-%d", i),
-					// 	Unit:           "peers",
-					// 	ImprovementDir: 1,
-					// }, float64(len(pids)))
+				ri.RunEnv.R().RecordPoint(fmt.Sprintf("gcp-peers-found-%d", i), float64(len(pids)))
+				// runenv.RecordMetric(&runtime.MetricDefinition{
+				// 	Name:           fmt.Sprintf("gcp-peers-found-%d", i),
+				// 	Unit:           "peers",
+				// 	ImprovementDir: 1,
+				// }, float64(len(pids)))
 
-					actualClosest := getClosestPeerRanking(node, others, c)
-					outputGCP(runenv, node.info.Addrs.ID, c, peers, actualClosest)
-				} else {
-					runenv.RecordMessage("Error during GCP %w", err)
-				}
-				return err
-			})
-		}
-
-		if err := g.Wait(); err != nil {
-			_ = stager.End()
-			return fmt.Errorf("failed while finding providerss: %s", err)
-		}
+				actualClosest := getClosestPeerRanking(node, others, c)
+				outputGCP(runenv, node.info.Addrs.ID, c, peers, actualClosest)
+			} else {
+				runenv.RecordMessage("Error during GCP %w", err)
+			}
+			return err
+		})
 	}
+
+	if err := g.Wait(); err != nil {
+		_ = stager.End()
+		return fmt.Errorf("failed while finding providerss: %s", err)
+	}
+	// }
 
 	runenv.RecordMessage("done gcp loop")
 

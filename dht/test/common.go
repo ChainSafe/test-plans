@@ -307,7 +307,8 @@ func SetupNetwork(ctx context.Context, ri *DHTRunInfo, latency time.Duration) er
 
 	topic := sync.NewTopic(hostname, sgnetwork.Config{})
 
-	sequence, err := bclient.Publish(ctx, topic, &sgnetwork.Config{
+	// _ replaces `sequence` in the line below
+	_, err = bclient.Publish(ctx, topic, &sgnetwork.Config{
 		Network: "default",
 		Enable:  true,
 		Default: sgnetwork.LinkShape{

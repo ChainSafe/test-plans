@@ -64,6 +64,8 @@ func setGroupInfo(ctx context.Context, ri *RunInfo, groupOrder int) error {
 
 	ri.RunEnv.RecordMessage("there are %d groups %v", len(groups), groups)
 
+	// ri.RunEnv.RecordMessage("setGroupInfo, groupOrderMap: ", groupOrderMap)
+
 	sortedGroups := make([]string, 0, len(groups))
 	sortedOrderNums := make([]int, 0, len(groupOrderMap))
 	for order := range groupOrderMap {
@@ -71,15 +73,19 @@ func setGroupInfo(ctx context.Context, ri *RunInfo, groupOrder int) error {
 	}
 	sort.Ints(sortedOrderNums)
 
+	// ri.RunEnv.RecordMessage("setGroupInfo, sortedOrderNums: %d", sortedOrderNums)
+	// ri.RunEnv.RecordMessage("setGroupInfo, len(sortedOrderNums: %d", len(sortedOrderNums))
+
 	for i := 0; i < len(sortedOrderNums); i++ {
-		sort.Strings(groupOrderMap[i])
-		sortedGroups = append(sortedGroups, groupOrderMap[i]...)
+		sort.Strings(groupOrderMap[i+1])
+		// ri.RunEnv.RecordMessage("setGroupInfo, groupOrderMap[%d]: ", i+1, groupOrderMap[i+1])
+		sortedGroups = append(sortedGroups, groupOrderMap[i+1]...)
 	}
 
 	ri.Groups = sortedGroups
 	ri.GroupProperties = groups
 
-	ri.RunEnv.RecordMessage("sortedGroup order %v", sortedGroups)
+	ri.RunEnv.RecordMessage("setGroupInfo, sortedGroup:", sortedGroups)
 
 	return nil
 }
