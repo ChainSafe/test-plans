@@ -129,15 +129,18 @@
   [groups.build]
     selectors = ["cypress"]
     [[groups.build.dependencies]]
-      # module = "github.com/libp2p/go-libp2p-kad-dht"
-      # version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
+      #module = "github.com/libp2p/go-libp2p-kad-dht"
+      #version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
 
       module = "github.com/ChainSafe/go-libp2p-kad-dht"
-      version = "5485040d65080ffd2189966be4fc4f075f39d483"
+      version = "53cbae694921505020cc822000360d6ec4b20d36"
 
     [[groups.build.dependencies]]
       module = "github.com/libp2p/go-libp2p-xor"
       version = "5c005aca55db27a0dc6d6defaa16c52125f02206"
+   # [[groups.build.dependencies]]
+   #   module = "github.com/ChainSafe/go-libp2p-kbucket"
+   #   version = "5908bbdf33d2177fb67e6243a520866cbc0858bc"
   [groups.run]
     [groups.run.test_params]
       alpha = "6"
@@ -148,6 +151,7 @@
       timeout_secs = "500"
       expect_dht = "true"
       bootstrapper = "true"
+      search_records = "true"
 
 # [[groups]]
 #   id = "cypress-searcher"

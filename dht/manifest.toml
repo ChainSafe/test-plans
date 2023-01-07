@@ -54,7 +54,7 @@ instances = { min = 16, max = 10000, default = 16 }
 
 [[testcases]]
 name = "find-providers"
-instances = { min = 16, max = 10000, default = 16 }
+instances = { min = 10, max = 10000, default = 16 }
 
   [testcases.params]
   timeout_secs = { type = "int", desc = "test timeout", unit = "seconds", default = 300 }
@@ -74,8 +74,8 @@ instances = { min = 16, max = 10000, default = 16 }
   expect_dht   = { type = "bool", desc = "the node expects to be a dht server", unit ="bool", default = true}
 
   record_seed    = { type = "int", desc = "the seed used to generate records", unit = "int", default = 0 }
-  record_count   = { type = "int", desc = "number of records a peer provides", unit = "int", default = 0 }
-  search_records = { type = "bool", desc = "node will search for records", unit = "bool", default = false }
+  record_count   = { type = "int", desc = "number of records a peer provides", unit = "int", default = 1 }
+  search_records = { type = "bool", desc = "node will search for records", unit = "bool", default = true }
   #p_providing = { type = "int", desc = "", unit = "% of nodes" }
   #p_resolving = { type = "int", desc = "", unit = "% of nodes" }
   #p_failing = { type = "int", desc = "", unit = "% of nodes" }
