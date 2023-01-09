@@ -62,23 +62,32 @@
 #       timeout_secs = "600"
 #       undialable = "false"
 
-[[groups]]
-  id = "balsam-dialable-provider"
-  [groups.instances]
-    count = 0
-    percentage = 0.0
-  [groups.build]
-    selectors = ["balsam"]
-  [groups.run]
-    [groups.run.test_params]
-      bs_strategy = "3"
-      bucket_size = "10"
-      expect_dht = "true"
-      group_order = "5"
-      record_count = "1"
-      timeout_secs = "500"
-      undialable = "false"
-      bootstrapper = "true"
+# [[groups]]
+#   id = "balsam-dialable-provider"
+#   [groups.instances]
+#     count = 50
+#     percentage = 0.0
+#   [groups.build]
+#     selectors = ["balsam"]
+#     [[groups.build.dependencies]]
+#       # module = "github.com/libp2p/go-libp2p-kad-dht"
+#       # version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
+
+#       module = "github.com/ChainSafe/go-libp2p-kad-dht"
+#       version = "2d001b9ea538d25919689fc67829ce88c8e1402e"
+#     [[groups.build.dependencies]]
+#       module = "github.com/libp2p/go-libp2p-xor"
+#       version = "5c005aca55db27a0dc6d6defaa16c52125f02206"
+#   [groups.run]
+#     [groups.run.test_params]
+#       bs_strategy = "3"
+#       bucket_size = "10"
+#       expect_dht = "true"
+#       group_order = "5"
+#       record_count = "1"
+#       timeout_secs = "500"
+#       undialable = "false"
+#       bootstrapper = "true"
 
 # [[groups]]
 #   id = "balsam-dialable-searcher"
@@ -124,7 +133,7 @@
 [[groups]]
   id = "cypress-provider"
   [groups.instances]
-    count = 30
+    count = 50
     percentage = 0.0
   [groups.build]
     selectors = ["cypress"]
@@ -133,7 +142,7 @@
       # version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
 
       module = "github.com/ChainSafe/go-libp2p-kad-dht"
-      version = "5485040d65080ffd2189966be4fc4f075f39d483"
+      version = "2d001b9ea538d25919689fc67829ce88c8e1402e"
 
     [[groups.build.dependencies]]
       module = "github.com/libp2p/go-libp2p-xor"
@@ -144,10 +153,11 @@
       bs_strategy = "3"
       bucket_size = "10"
       group_order = "1"
-      record_count = "1"
-      timeout_secs = "500"
+      record_count = "20"
+      timeout_secs = "1200"
       expect_dht = "true"
       bootstrapper = "true"
+      search_records = "true"
 
 # [[groups]]
 #   id = "cypress-searcher"
