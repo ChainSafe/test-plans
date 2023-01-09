@@ -91,11 +91,6 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 				if err == nil {
 					runenv.RecordMessage("Provided CID: %s", c)
 					ri.RunEnv.R().RecordPoint(fmt.Sprintf("time-to-provide-%d", i), float64(time.Since(t).Nanoseconds()))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("time-to-provide-%d", i),
-					// 	Unit:           "ns",
-					// 	ImprovementDir: -1,
-					// }, float64(time.Since(t).Nanoseconds()))
 				}
 
 				return err
@@ -142,7 +137,8 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 					select {
 					case _, ok := <-provsCh:
 						if !ok {
-							// runenv.RecordMessage("testProviderRecords, provLoop ok: ", ok)
+							hops := node.dht.GetMostRecentLookupHops()
+							runenv.R().RecordPoint(fmt.Sprintf("num-hops|%s|%d", groupID, i), float64(hops))
 							break provLoop
 						}
 
@@ -150,11 +146,6 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 
 						if numProvs == 0 {
 							runenv.R().RecordPoint(fmt.Sprintf("time-to-find-first|%s|%d", groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-							// runenv.RecordMetric(&runtime.MetricDefinition{
-							// 	Name:           fmt.Sprintf("time-to-find-first|%s|%d", groupID, i),
-							// 	Unit:           "ns",
-							// 	ImprovementDir: -1,
-							// }, float64(tLastFound.Sub(t).Nanoseconds()))
 						}
 
 						numProvs++
@@ -167,36 +158,13 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 
 				if numProvs > 0 {
 					runenv.R().RecordPoint(fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i), float64(tLastFound.Sub(t).Nanoseconds()))
-					// runenv.RecordMetric(&runtime.MetricDefinition{
-					// 	Name:           fmt.Sprintf("time-to-find-last|%s|%s|%d", status, groupID, i),
-					// 	Unit:           "ns",
-					// 	ImprovementDir: -1,
-					// }, float64(tLastFound.Sub(t).Nanoseconds()))
 				} else if status != "incomplete" {
 					status = "fail"
 				}
 
 				runenv.R().RecordPoint(fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i), float64(time.Since(t).Nanoseconds()))
-				// runenv.RecordMetric(&runtime.MetricDefinition{
-				// 	Name:           fmt.Sprintf("time-to-find|%s|%s|%d", status, groupID, i),
-				// 	Unit:           "ns",
-				// 	ImprovementDir: -1,
-				// }, float64(time.Since(t).Nanoseconds()))
-
 				runenv.R().RecordPoint(fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i), float64(numProvs))
-				// runenv.RecordMetric(&runtime.MetricDefinition{
-				// 	Name:           fmt.Sprintf("peers-found|%s|%s|%d", status, groupID, i),
-				// 	Unit:           "peers",
-				// 	ImprovementDir: 1,
-				// }, float64(numProvs))
-
 				runenv.R().RecordPoint(fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i), float64(ri.GroupProperties[groupID].Size-numProvs))
-				// runenv.RecordMetric(&runtime.MetricDefinition{
-				// 	Name:           fmt.Sprintf("peers-missing|%s|%s|%d", status, groupID, i),
-				// 	Unit:           "peers",
-				// 	ImprovementDir: -1,
-				// }, float64(ri.GroupProperties[groupID].Size-numProvs))
-
 				return nil
 			})
 		}

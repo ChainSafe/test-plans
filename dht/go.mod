@@ -24,6 +24,7 @@ require (
 )
 
 require (
+	github.com/ChainSafe/go-keyspace v0.0.0-20220830203127-eae3b7c602f0 // indirect
 	github.com/avast/retry-go v2.6.0+incompatible // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -38,7 +39,6 @@ require (
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
-	github.com/go-redis/redis/v7 v7.4.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
@@ -111,7 +111,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	github.com/testground/sync-service v0.1.0 // indirect
 	github.com/testground/testground v0.5.3 // indirect
-	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
@@ -131,7 +130,11 @@ require (
 //replace github.com/libp2p/go-libp2p-autonat => github.com/willscott/go-libp2p-autonat v0.1.2-0.20200310184838-ce79942134d7
 //replace github.com/libp2p/go-libp2p-autonat-svc => github.com/libp2p/go-libp2p-autonat-svc v0.1.1-0.20200310185508-f21360000124
 //replace github.com/libp2p/go-libp2p-kad-dht => ../../../../libp2p/go-libp2p-kad-dht
-//replace github.com/libp2p/go-libp2p-kad-dht => github.com/libp2p/go-libp2p-kad-dht v0.5.2-0.20200310202241-7ada018b2a13
+
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921
+
+replace github.com/libp2p/go-libp2p-kbucket => github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2
+
 //replace github.com/libp2p/go-libp2p => github.com/libp2p/go-libp2p v0.6.1-0.20200310185355-89c193e0ca37
 //replace github.com/libp2p/go-libp2p-core => github.com/libp2p/go-libp2p-core v0.5.0
 
