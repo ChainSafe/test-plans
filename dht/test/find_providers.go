@@ -218,31 +218,21 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 // sync service which nodes our group plans on advertising
 func getRecords(ri *DHTRunInfo, fpOpts findProvsParams) ([]cid.Cid, []*ProviderRecordSubmission) {
 	recGen := func(groupID string, groupFPOpts findProvsParams) (out []cid.Cid) {
-		ri.RunEnv.RecordMessage("getRecords, groupID: ", groupID)
-		ri.RunEnv.RecordMessage("getRecords, groupFPOpts: ", groupFPOpts)
-
 		for i := 0; i < groupFPOpts.RecordCount; i++ {
 			c := fmt.Sprintf("CID %d - group %s - seeded with %d", i, groupID, groupFPOpts.RecordSeed)
-			ri.RunEnv.RecordMessage("getRecords, c: ", c)
 			out = append(out, cid.NewCidV0(u.Hash([]byte(c))))
 		}
-		ri.RunEnv.RecordMessage("getRecords, out: ", out)
 		return out
 	}
 
 	var emitRecords []cid.Cid
-	ri.RunEnv.RecordMessage("getRecords, fpOpts.RecordCount: ", fpOpts.RecordCount)
 	if fpOpts.RecordCount > 0 {
 		// Calculate the CIDs we're dealing with.
 		ri.RunEnv.RecordMessage("getRecords, record count > 0")
 		emitRecords = recGen(ri.Node.info.Group, fpOpts)
 	}
 
-	ri.RunEnv.RecordMessage("getRecords, emitRecords: ", emitRecords)
-
 	var searchRecords []*ProviderRecordSubmission
-
-	ri.RunEnv.RecordMessage("getRecords, ri.RunInfo.Groups", ri.RunInfo.Groups)
 
 	// force search records. need to uncomment line below + the last line in code block to re-enable this flag feature.
 	// if fpOpts.SearchRecords {
