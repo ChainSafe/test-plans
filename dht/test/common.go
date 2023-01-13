@@ -844,6 +844,8 @@ func RandomWalk(ctx context.Context, runenv *runtime.RunEnv, dht *kaddht.IpfsDHT
 func Base(ctx context.Context, runenv *runtime.RunEnv, commonOpts *SetupOpts) (*DHTRunInfo, error) {
 	ectx := specializedTraceQuery(ctx, runenv, "bootstrap-network")
 
+	utils.CollectCpuUsage(runenv)
+
 	ri, err := Setup(ectx, runenv, commonOpts)
 	if err != nil {
 		return nil, err

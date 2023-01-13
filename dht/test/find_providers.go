@@ -137,6 +137,7 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 					select {
 					case _, ok := <-provsCh:
 						if !ok {
+							// this part will not work with the libp2p kad dht implementation as it does not output any metrics for hop counts.
 							hops := node.dht.GetMostRecentLookupHops()
 							runenv.R().RecordPoint(fmt.Sprintf("num-hops|%s|%d", groupID, i), float64(hops))
 							break provLoop
