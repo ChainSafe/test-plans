@@ -44,10 +44,8 @@ github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX
 github.com/Azure/go-autorest v11.1.2+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/ChainSafe/go-keyspace v0.0.0-20220830203127-eae3b7c602f0 h1:iTTaKZ4D0mS4VWOPJNzQXMhDVNtTAjK8GGCVIz46XtA=
-github.com/ChainSafe/go-keyspace v0.0.0-20220830203127-eae3b7c602f0/go.mod h1:NE6Gpl6geZ3MkYhDdbEVhbuNAtISJJx6MRv5l23E22Y=
-github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921 h1:oOrhTnRnu1Tijxv3B2kvA9Mml8/wPRsy0mFosi041z4=
-github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921/go.mod h1:qNqMcI62XSDLMhj1y4+NMixDVFeuu+46x/PoWcjW2DY=
+github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20230110215018-7af377cd4175 h1:svsgaKT2OEaQRF+WmUcxLgmGCH5/zGssyoZ9SnJ1/eM=
+github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20230110215018-7af377cd4175/go.mod h1:Gb92MYIPm3K2pJLGn8wl0m8wiKDvHrYpg+rOd0GzzPA=
 github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2 h1:BV5PQhNw4wMMdfd1rZOdggs3BBsbboar9siKfPaPz3A=
 github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2/go.mod h1:zGzGCpQd78b5BNTDGHNDLaTt9aDK/A02xeZp9QeFC4U=
 github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5/go.mod h1:tTuCMEN+UleMWgg9dVx4Hu52b1bJo+59jBh3ajtinzw=
@@ -802,6 +800,8 @@ github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df/go.mod h1:JP3t17
 github.com/warpfork/go-wish v0.0.0-20200122115046-b9ea61034e4a h1:G++j5e0OC488te356JvdhaM8YS6nMsjLAYF7JxCv07w=
 github.com/warpfork/go-wish v0.0.0-20200122115046-b9ea61034e4a/go.mod h1:x6AKhvSSexNrVSrViXSHUEbICjmGXhtgABaHIySUSGw=
 github.com/whilp/git-urls v0.0.0-20191001220047-6db9661140c0/go.mod h1:2rx5KE5FLD0HRfkkpyn8JwbVLBdhgeiOb2D2D9LLKM4=
+github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 h1:EKhdznlJHPMoKr0XTrX+IlJs1LH3lyx2nfr1dOlZ79k=
+github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1/go.mod h1:8UvriyWtv5Q5EOgjHaSseUEdkQfvwFv1I/In/O2M9gc=
 github.com/xanzy/ssh-agent v0.2.1/go.mod h1:mLlQY/MoOhWBj+gOGMQkOeiEvkx+8pJSI+0Bx9h2kr4=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415/go.mod h1:GwrjFmJcFw6At/Gs6z4yjiIwzuJ1/+UwLxMQDVQXShQ=

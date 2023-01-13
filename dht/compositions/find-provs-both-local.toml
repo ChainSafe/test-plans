@@ -138,11 +138,15 @@
   [groups.build]
     selectors = ["cypress"]
     [[groups.build.dependencies]]
-      #module = "github.com/libp2p/go-libp2p-kad-dht"
-      #version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
+      # module = "github.com/libp2p/go-libp2p-kad-dht"
+      # version = "dae5a9a5bd9c7cc8cfb5073c711bc308efad0ada"
 
       module = "github.com/ChainSafe/go-libp2p-kad-dht"
-      version = "53cbae694921505020cc822000360d6ec4b20d36"
+      # hop count / vanilla kad dht
+      version = "7af377cd4175ecffab591c862f928de12b3aee21"
+      # hop count / double hashed dht
+      # version = "53cbae694921505020cc822000360d6ec4b20d36"
+      # previously using 2d001b9ea538d25919689fc67829ce88c8e1402e branch for previous tests (before jan52023)
 
     [[groups.build.dependencies]]
       module = "github.com/libp2p/go-libp2p-xor"
@@ -157,7 +161,7 @@
       bucket_size = "10"
       group_order = "1"
       record_count = "20"
-      timeout_secs = "1200"
+      timeout_secs = "2000"
       expect_dht = "true"
       bootstrapper = "true"
       search_records = "true"
