@@ -259,7 +259,7 @@ func NewDHTNode(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts, id
 }
 
 func reportBandwidth(ctx context.Context, runenv *runtime.RunEnv, info *DHTNodeInfo, reporter metrics.Reporter) {
-	dhtProtocolID := protocol.ID("/ipfs/kad/1.0.0")
+	dhtProtocolID := protocol.ID("/testground/kad/1.0.0")
 	ticker := time.NewTicker(time.Second * 5) //TODO: arbitrary
 	groupID := info.Group
 	i := info.Seq // is this the right node index?
