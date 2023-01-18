@@ -255,14 +255,20 @@ func NewDHTNode(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts, id
 
 	go reportBandwidth(ctx, runenv, info, reporter)
 
+	protocols := node.Mux().Protocols()
+	for _, p := range protocols {
+		runenv.RecordMessage("supporting protocol:", p)
+	}
+
 	return node, dht, nil
 }
 
 func reportBandwidth(ctx context.Context, runenv *runtime.RunEnv, info *DHTNodeInfo, reporter metrics.Reporter) {
 	dhtProtocolID := protocol.ID("/testground/kad/1.0.0")
-	ticker := time.NewTicker(time.Second * 5) //TODO: arbitrary
+	ticker := time.NewTicker(time.Second * 20) //TODO: arbitrary
 	groupID := info.Group
-	i := info.Seq // is this the right node index?
+	idx := info.Seq // is this the right node index?
+	i := 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -270,21 +276,22 @@ func reportBandwidth(ctx context.Context, runenv *runtime.RunEnv, info *DHTNodeI
 			stats := reporter.GetBandwidthByProtocol()
 			dhtStats := stats[dhtProtocolID]
 			runenv.R().RecordPoint(
-				fmt.Sprintf("bandwidth-total-in|%s|%d", groupID, i),
+				fmt.Sprintf("bandwidth-total-in|%s|%d|%d", groupID, idx, i),
 				float64(dhtStats.TotalIn),
 			)
 			runenv.R().RecordPoint(
-				fmt.Sprintf("bandwidth-total-out|%s|%d", groupID, i),
+				fmt.Sprintf("bandwidth-total-out|%s|%d|%d", groupID, idx, i),
 				float64(dhtStats.TotalOut),
 			)
 			runenv.R().RecordPoint(
-				fmt.Sprintf("bandwidth-rate-in|%s|%d", groupID, i),
+				fmt.Sprintf("bandwidth-rate-in|%s|%d|%d", groupID, idx, i),
 				float64(dhtStats.RateIn),
 			)
 			runenv.R().RecordPoint(
-				fmt.Sprintf("bandwidth-rate-out|%s|%d", groupID, i),
+				fmt.Sprintf("bandwidth-rate-out|%s|%d|%d", groupID, idx, i),
 				float64(dhtStats.RateOut),
 			)
+			i++
 		}
 	}
 }
