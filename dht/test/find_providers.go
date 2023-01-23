@@ -127,6 +127,12 @@ func TestProviderRecords(ctx context.Context, ri *DHTRunInfo) error {
 				ectx = TraceQuery(ctx, runenv, node, p.Pretty(), "provider-records")
 				t := time.Now()
 
+				const prefixLength = 4 // length in BITS
+				err := node.dht.SetPrefixLength(prefixLength)
+				if err != nil {
+					return err
+				}
+
 				numProvs := 0
 				provsCh := node.dht.FindProvidersAsync(ectx, c, getAllProvRecordsNum())
 				status := "done"

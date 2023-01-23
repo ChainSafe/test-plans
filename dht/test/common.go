@@ -25,12 +25,15 @@ import (
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	"github.com/libp2p/go-libp2p"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
+	"github.com/libp2p/go-libp2p-core/crypto"
+	"github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/peer"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
-	"github.com/libp2p/go-libp2p/core/crypto"
-	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
-	"github.com/libp2p/go-libp2p/core/peer"
-	connmgr "github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/libp2p/go-libp2p/core/metrics"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/transport"
 	swarm "github.com/libp2p/go-libp2p/p2p/net/swarm"
 	tcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
@@ -163,12 +166,20 @@ func NewDHTNode(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts, id
 		return nil, nil, err
 	}
 
+	reporter := metrics.NewBandwidthCounter()
 	libp2pOpts := []libp2p.Option{
 		libp2p.Identity(idKey),
 		// Use only the TCP transport without reuseport.
-		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(func(u transport.Upgrader) *tcp.TcpTransport {
+			tpt, err := tcp.NewTCPTransport(u, nil, tcp.DisableReuseport())
+			if err != nil {
+				panic(err)
+			}
+			return tpt
+		}),
 		// Setup the connection manager to trim to
 		libp2p.ConnectionManager(cm),
+		libp2p.BandwidthReporter(reporter),
 	}
 
 	if info.Properties.Undialable {
@@ -241,7 +252,48 @@ func NewDHTNode(ctx context.Context, runenv *runtime.RunEnv, opts *SetupOpts, id
 		return nil, nil, err
 	}
 	runenv.RecordMessage("creating DHT successful")
+
+	go reportBandwidth(ctx, runenv, info, reporter)
+
+	protocols := node.Mux().Protocols()
+	for _, p := range protocols {
+		runenv.RecordMessage("supporting protocol:", p)
+	}
+
 	return node, dht, nil
+}
+
+func reportBandwidth(ctx context.Context, runenv *runtime.RunEnv, info *DHTNodeInfo, reporter metrics.Reporter) {
+	dhtProtocolID := protocol.ID("/testground/kad/1.0.0")
+	ticker := time.NewTicker(time.Second * 20) //TODO: arbitrary
+	groupID := info.Group
+	idx := info.Seq // is this the right node index?
+	i := 0
+	for {
+		select {
+		case <-ctx.Done():
+		case <-ticker.C:
+			stats := reporter.GetBandwidthByProtocol()
+			dhtStats := stats[dhtProtocolID]
+			runenv.R().RecordPoint(
+				fmt.Sprintf("bandwidth-total-in|%s|%d|%d", groupID, idx, i),
+				float64(dhtStats.TotalIn),
+			)
+			runenv.R().RecordPoint(
+				fmt.Sprintf("bandwidth-total-out|%s|%d|%d", groupID, idx, i),
+				float64(dhtStats.TotalOut),
+			)
+			runenv.R().RecordPoint(
+				fmt.Sprintf("bandwidth-rate-in|%s|%d|%d", groupID, idx, i),
+				float64(dhtStats.RateIn),
+			)
+			runenv.R().RecordPoint(
+				fmt.Sprintf("bandwidth-rate-out|%s|%d|%d", groupID, idx, i),
+				float64(dhtStats.RateOut),
+			)
+			i++
+		}
+	}
 }
 
 func getSubnetAddr(subnet *ptypes.IPNet) (*net.TCPAddr, error) {
