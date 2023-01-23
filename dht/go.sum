@@ -46,8 +46,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/ChainSafe/go-keyspace v0.0.0-20220830203127-eae3b7c602f0 h1:iTTaKZ4D0mS4VWOPJNzQXMhDVNtTAjK8GGCVIz46XtA=
 github.com/ChainSafe/go-keyspace v0.0.0-20220830203127-eae3b7c602f0/go.mod h1:NE6Gpl6geZ3MkYhDdbEVhbuNAtISJJx6MRv5l23E22Y=
-github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921 h1:oOrhTnRnu1Tijxv3B2kvA9Mml8/wPRsy0mFosi041z4=
-github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921/go.mod h1:qNqMcI62XSDLMhj1y4+NMixDVFeuu+46x/PoWcjW2DY=
+github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20230118170510-2fbe0738960e h1:wf2oPkCnB2PFUctp6dMxe3VzT4bOpV9CHkfclTWQrNI=
+github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20230118170510-2fbe0738960e/go.mod h1:qNqMcI62XSDLMhj1y4+NMixDVFeuu+46x/PoWcjW2DY=
 github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2 h1:BV5PQhNw4wMMdfd1rZOdggs3BBsbboar9siKfPaPz3A=
 github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2/go.mod h1:zGzGCpQd78b5BNTDGHNDLaTt9aDK/A02xeZp9QeFC4U=
 github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5/go.mod h1:tTuCMEN+UleMWgg9dVx4Hu52b1bJo+59jBh3ajtinzw=

@@ -130,7 +130,7 @@ require (
 //replace github.com/libp2p/go-libp2p-autonat-svc => github.com/libp2p/go-libp2p-autonat-svc v0.1.1-0.20200310185508-f21360000124
 //replace github.com/libp2p/go-libp2p-kad-dht => ../../../../libp2p/go-libp2p-kad-dht
 
-replace github.com/libp2p/go-libp2p-kad-dht => github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20221214210337-53cbae694921
+replace github.com/libp2p/go-libp2p-kad-dht => github.com/ChainSafe/go-libp2p-kad-dht v0.0.0-20230118170510-2fbe0738960e
 
 replace github.com/libp2p/go-libp2p-kbucket => github.com/ChainSafe/go-libp2p-kbucket v0.0.0-20220909164730-5908bbdf33d2
 
